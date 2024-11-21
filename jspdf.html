@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to PDF</title>
+    <script src="libs/dompurify/2.3.4/purify.js"></script>
+    <script src="libs/markdown-it/12.3.2/markdown-it.js"></script>
+    <script src="libs/jspdf/2.5.1/jspdf.umd.js"></script>
+    <script src="libs/html2canvas/1.4.1/html2canvas.js"></script>
+    <style>
+        /* Add styles for the temporary element */
+        #temp-content {
+            font-size: 12pt;
+            line-height: 1;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+    <textarea id="markdown" rows="10" cols="50"></textarea>
+    <button id="generate-pdf">Generate PDF</button>
+
+    <script>
+        document.getElementById('generate-pdf').addEventListener('click', function() {
+            const markdownText = document.getElementById('markdown').value;
+            markdownToPdf(markdownText, 'output.pdf');
+        });
+
+        async function markdownToPdf(markdownText, pdfFileName) {
+            // Initialize Markdown parser
+            const md = window.markdownit({
+                breaks: true,
+                linkify: true
+            });
+
+            // Convert Markdown to HTML
+            const htmlContent = md.render(markdownText);
+
+            // Sanitize the HTML content
+            const cleanHtml = DOMPurify.sanitize(htmlContent);
+            console.log(cleanHtml);
+
+            // Create a temporary element to hold the HTML content
+            const tempElement = document.createElement('div');
+            tempElement.id = 'temp-content'; // Set the ID for styling
+            tempElement.innerHTML = cleanHtml;
+            document.body.appendChild(tempElement);
+
+            // Create a new jsPDF instance
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'pt',
+                format: 'letter',
+                hotfixes: ["px_scaling"]
+            });
+
+            // Use jsPDF's html method to add HTML content to PDF
+            // Current limitations/issues: Formatting is buggy, things depending on content start collapsing wrong. Bold/italic text might fall under. I haven't had luck tracking down a solution, but splitting the text into individual lines and adding it in with pdf.text(), while harder, might allow enough control over the content layout to prevent it.
+            await pdf.html(tempElement, {
+                callback: function (doc) {
+                    // Save the PDF
+                    doc.save(pdfFileName);
+
+                    // Save to Blob
+                    //doc.output('blob', pdfFileName)
+                },
+                width: 540,        // 540pt = 8.5 inches - 0.5 inch left/right margins
+                windowWidth: 612,  // 612pt = 8.5 inches
+                margin: 36,        // 36pt  = 1/2 inches
+                autoPaging: 'text'
+            });
+
+            // Clean up
+            document.body.removeChild(tempElement);
+        }
+    </script>
+</body>
+
+</html>

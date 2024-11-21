@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to PDF</title>
+    <script src="libs/dompurify/2.3.4/purify.js"></script>
+    <script src="libs/markdown-it/12.3.2/markdown-it.js"></script>
+    <script src="libs/html2pdf.js/0.10.2/html2pdf.bundle.js"></script>
+    <style>
+        /* Add styles for the temporary element */
+        #temp-content {
+            font-size: 12pt;
+            line-height: 1;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+    <textarea id="markdown" rows="10" cols="50"></textarea>
+    <button id="generate-pdf">Generate PDF</button>
+
+    <script>
+        document.getElementById('generate-pdf').addEventListener('click', function() {
+            const markdownText = document.getElementById('markdown').value;
+            markdownToPdf(markdownText, 'output.pdf');
+        });
+
+        async function markdownToPdf(markdownText, pdfFileName) {
+            // Initialize Markdown parser
+            const md = window.markdownit({
+                breaks: true,
+                linkify: true
+            });
+
+            // Convert Markdown to HTML
+            const htmlContent = md.render(markdownText);
+
+            // Sanitize the HTML content
+            const cleanHtml = DOMPurify.sanitize(htmlContent);
+            console.log(cleanHtml);
+
+            // Create a temporary element to hold the HTML content
+            const tempElement = document.createElement('div');
+            tempElement.id = 'temp-content'; // Set the ID for styling
+            tempElement.innerHTML = cleanHtml;
+            document.body.appendChild(tempElement);
+
+            // Use html2pdf
+            // Current limitations/issues: This looks better and supports more, but it saves the PDF as an image. This means text is not selectable and some scanning systems might not be able to parse it.
+            var opts = {
+                margin:       0.5,
+                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+                filename:     'myfile.pdf',
+                html2canvas:  { scale: 1 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf(tempElement, opts);
+
+            // Clean up
+            document.body.removeChild(tempElement);
+        }
+    </script>
+</body>
+
+</html>
